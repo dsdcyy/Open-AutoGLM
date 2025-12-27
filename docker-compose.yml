@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  autoglm:
+    image: dsdcyy/ljw:AutoGLM-Control-v1.3
+    container_name: autoglm-control
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - PORT=9000
+      # 可选：如果需要自定义其他环境变量
+      # - ANDROID_ADB_SERVER_ADDRESS=127.0.0.1
+      # - ANDROID_ADB_SERVER_PORT=5037
+    # 如果使用 host 网络模式，ports 配置会被忽略
+    # ports:
+    #   - "9000:9000"
+
+    # 可选：如果需要持久化数据，可以添加 volumes
+    # volumes:
+    #   - ./logs:/app/logs
+    #   - ./data:/app/data
+
+    # 可选：资源限制
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '1'
+    #       memory: 1G

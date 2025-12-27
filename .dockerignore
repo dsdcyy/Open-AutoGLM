@@ -1,0 +1,69 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+
+# Virtual Environment
+venv
+env
+ENV
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Logs
+logs
+*.log
+
+# Sensitive Files
+key
+*.key
+*.pem
+.env
+.env.*
+*.secret
+*_secret*
+*password*
+*token*
+
+# Documentation (optional, keep if needed)
+Installation_Log.md
+README_WEB.md
+DOCKER_COMPOSE_GUIDE.md
+
+# APK Files (already in container)
+*.apk
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Development
+.pre-commit-config.yaml
+.github
+scripts
+
+# Examples (optional)
+examples
+
+# Tests (if any)
+tests
+test_*
+*_test.py

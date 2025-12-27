@@ -4,6 +4,8 @@ import json
 import traceback
 from dataclasses import dataclass
 from typing import Any, Callable
+from phone_agent.adb.screenshot import Screenshot
+
 
 from phone_agent.actions import ActionHandler
 from phone_agent.actions.handler import do, finish, parse_action
@@ -34,9 +36,10 @@ class StepResult:
 
     success: bool
     finished: bool
-    action: dict[str, Any] | None
     thinking: str
+    action: dict[str, Any] | None
     message: str | None = None
+    screenshot_base64: str | None = None
 
 
 class PhoneAgent:
@@ -67,9 +70,11 @@ class PhoneAgent:
         agent_config: AgentConfig | None = None,
         confirmation_callback: Callable[[str], bool] | None = None,
         takeover_callback: Callable[[str], None] | None = None,
+        step_callback: Callable[["StepResult"], None] | None = None,
     ):
         self.model_config = model_config or ModelConfig()
         self.agent_config = agent_config or AgentConfig()
+        self.step_callback = step_callback
 
         self.model_client = ModelClient(self.model_config)
         self.action_handler = ActionHandler(
@@ -96,6 +101,8 @@ class PhoneAgent:
 
         # First step with user prompt
         result = self._execute_step(task, is_first=True)
+        if self.step_callback:
+            self.step_callback(result)
 
         if result.finished:
             return result.message or "Task completed"
@@ -103,6 +110,8 @@ class PhoneAgent:
         # Continue until finished or max steps reached
         while self._step_count < self.agent_config.max_steps:
             result = self._execute_step(is_first=False)
+            if self.step_callback:
+                self.step_callback(result)
 
             if result.finished:
                 return result.message or "Task completed"
@@ -142,12 +151,14 @@ class PhoneAgent:
         # Capture current screen state
         device_factory = get_device_factory()
         screenshot = device_factory.get_screenshot(self.agent_config.device_id)
-        current_app = device_factory.get_current_app(self.agent_config.device_id)
+        current_app = device_factory.get_current_app(
+            self.agent_config.device_id)
 
         # Build messages
         if is_first:
             self._context.append(
-                MessageBuilder.create_system_message(self.agent_config.system_prompt)
+                MessageBuilder.create_system_message(
+                    self.agent_config.system_prompt)
             )
 
             screen_info = MessageBuilder.build_screen_info(current_app)
@@ -202,7 +213,8 @@ class PhoneAgent:
             print("=" * 50 + "\n")
 
         # Remove image from context to save space
-        self._context[-1] = MessageBuilder.remove_images_from_message(self._context[-1])
+        self._context[-1] = MessageBuilder.remove_images_from_message(
+            self._context[-1])
 
         # Execute action
         try:
@@ -240,6 +252,7 @@ class PhoneAgent:
             action=action,
             thinking=response.thinking,
             message=result.message or action.get("message"),
+            screenshot_base64=screenshot.base64_data,
         )
 
     @property

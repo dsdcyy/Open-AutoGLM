@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open-AutoGLM Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl p-8 border border-gray-700">
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+                Open-AutoGLM
+            </h1>
+            <p class="text-gray-400 mt-2">AI Phone Agent Configuration</p>
+        </div>
+
+        <div class="space-y-6">
+            <!-- System Status -->
+            <div class="bg-gray-900 rounded-lg p-6 border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 text-white">System Check</h2>
+                <div class="space-y-3" id="status-list">
+                    <div class="flex items-center justify-between">
+                        <span>ADB Connection</span>
+                        <span id="status-adb" class="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">Pending</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>ADB Keyboard</span>
+                        <span id="status-keyboard" class="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">Pending</span>
+                    </div>
+                </div>
+                <button onclick="checkSystem()" class="mt-4 w-full py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors">
+                    Re-check System
+                </button>
+            </div>
+
+            <!-- Configuration Form -->
+            <form id="config-form" onsubmit="startAgent(event)" class="bg-gray-900 rounded-lg p-6 border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 text-white">Model Configuration</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Base URL</label>
+                        <input type="text" name="base_url" value="https://open.bigmodel.cn/api/paas/v4" 
+                            class="w-full bg-gray-800 border border-gray-600 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-500 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Model Name</label>
+                        <input type="text" name="model" value="autoglm-phone" 
+                            class="w-full bg-gray-800 border border-gray-600 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-500 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">API Key</label>
+                        <input type="password" name="apikey" placeholder="sk-..." required
+                            class="w-full bg-gray-800 border border-gray-600 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-500 text-white">
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <button type="submit" id="start-btn" class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded font-semibold transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Launch Agent
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function checkSystem() {
+            const adbEl = document.getElementById('status-adb');
+            const kbEl = document.getElementById('status-keyboard');
+            const startBtn = document.getElementById('start-btn');
+            
+            adbEl.innerText = "Checking...";
+            kbEl.innerText = "Checking...";
+            startBtn.disabled = true;
+
+            try {
+                const res = await fetch('/check', { method: 'POST' });
+                const data = await res.json();
+                
+                updateStatus(adbEl, data.adb);
+                updateStatus(kbEl, data.keyboard);
+
+                if (data.adb && data.keyboard) {
+                    startBtn.disabled = false;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function updateStatus(el, success) {
+            if (success) {
+                el.className = "px-2 py-1 rounded text-xs bg-green-900 text-green-300 border border-green-700";
+                el.innerText = "OK";
+            } else {
+                el.className = "px-2 py-1 rounded text-xs bg-red-900 text-red-300 border border-red-700";
+                el.innerText = "Failed";
+            }
+        }
+
+        async function startAgent(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            // Save to localStorage for convenience
+            localStorage.setItem('config', JSON.stringify(data));
+
+            // Validate API Key
+            if (!data.apikey) {
+                alert("Please enter API Key");
+                return;
+            }
+
+            // Redirect to App with params
+            const params = new URLSearchParams(data).toString();
+            window.location.href = `/app?${params}`;
+        }
+
+        // Auto check on load
+        window.addEventListener('load', () => {
+             checkSystem();
+             // Load saved config
+             const saved = localStorage.getItem('config');
+             if (saved) {
+                 const data = JSON.parse(saved);
+                 const form = document.getElementById('config-form');
+                 form.base_url.value = data.base_url || form.base_url.value;
+                 form.model.value = data.model || form.model.value;
+                 form.apikey.value = data.apikey || "";
+             }
+        });
+    </script>
+</body>
+</html>
