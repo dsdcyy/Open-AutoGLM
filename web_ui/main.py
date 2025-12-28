@@ -1,18 +1,17 @@
+from phone_agent.adb.input import detect_and_set_adb_keyboard
+from phone_agent.adb.connection import ADBConnection
+from agent_manager import agent_manager
+from pydantic import BaseModel
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from typing import List
 import sys
 import os
 
 # Add project root to path so we can import phone_agent
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from typing import List
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
-from agent_manager import agent_manager
-from phone_agent.adb.connection import ADBConnection
-from phone_agent.adb.input import detect_and_set_adb_keyboard
 
 
 app = FastAPI()
@@ -91,20 +90,69 @@ async def check_system():
     """Verify ADB connection and Keyboard"""
     conn = ADBConnection()
     devices = conn.list_devices()
-    adb_ok = len(devices) > 0
+
+    # Filter only devices with status "device" (not "offline" or "unauthorized")
+    online_devices = [d for d in devices if d.status == "device"]
+    adb_ok = len(online_devices) > 0
 
     keyboard_ok = False
     if adb_ok:
         try:
             # Check for ADB Keyboard
-            # We assume the first device is the target
-            ime = detect_and_set_adb_keyboard(devices[0].device_id)
+            # We assume the first online device is the target
+            ime = detect_and_set_adb_keyboard(online_devices[0].device_id)
             keyboard_ok = True
         except Exception as e:
             print(f"Keyboard check check failed: {e}")
             keyboard_ok = False
 
     return {"adb": adb_ok, "keyboard": keyboard_ok}
+
+
+class WirelessConnection(BaseModel):
+    ip: str
+    port: str
+
+
+@app.post("/connect_wireless")
+async def connect_wireless(config: WirelessConnection):
+    """Connect to device via wireless ADB"""
+    import subprocess
+
+    target = f"{config.ip}:{config.port}"
+
+    try:
+        # Execute adb connect command
+        result = subprocess.run(
+            ["adb", "connect", target],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        output = result.stdout + result.stderr
+
+        # Check if connection successful
+        if "connected" in output.lower() or "already connected" in output.lower():
+            return {
+                "success": True,
+                "message": f"Successfully connected to {target}"
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Failed to connect: {output.strip()}"
+            }
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Connection timeout. Please check IP and port."
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }
 
 
 class InitConfig(BaseModel):
@@ -153,7 +201,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="AutoGLM Web UI")
-    parser.add_argument("--port", type=int, default=8001, help="Port to run the server on")
+    parser.add_argument("--port", type=int, default=8001,
+                        help="Port to run the server on")
     args = parser.parse_args()
 
     # Check for ENV overrides if CLI arg is default
