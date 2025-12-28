@@ -211,9 +211,7 @@ class XCTestConnection:
             )
             return response.status_code == 200
         except ImportError:
-            print(
-                "Error: requests library not found. Install it: pip install requests"
-            )
+            print("Error: requests library not found. Install it: pip install requests")
             return False
         except Exception:
             return False

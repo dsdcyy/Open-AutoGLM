@@ -99,9 +99,7 @@ def check_system_requirements(wda_url: str = "http://localhost:8100") -> bool:
             print("     4. Or connect via WiFi using device IP")
             all_passed = False
         else:
-            device_names = [
-                d.device_name or d.device_id[:8] + "..." for d in devices
-            ]
+            device_names = [d.device_name or d.device_id[:8] + "..." for d in devices]
             print(f"✅ OK ({len(devices)} device(s): {', '.join(device_names)})")
     except Exception as e:
         print("❌ FAILED")
@@ -326,7 +324,9 @@ Examples:
     )
 
     parser.add_argument(
-        "--list-devices", action="store_true", help="List connected iOS devices and exit"
+        "--list-devices",
+        action="store_true",
+        help="List connected iOS devices and exit",
     )
 
     parser.add_argument(
@@ -474,9 +474,7 @@ def main():
 
     # Create configurations
     model_config = ModelConfig(
-        base_url=args.base_url,
-        model_name=args.model,
-        api_key=args.api_key
+        base_url=args.base_url, model_name=args.model, api_key=args.api_key
     )
 
     agent_config = IOSAgentConfig(

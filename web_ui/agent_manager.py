@@ -24,7 +24,7 @@ class WebAgentManager:
         if self.log_callback:
             self.log_callback(message)
         # Avoid infinite recursion if sys.stdout is redirected
-        sys.__stdout__.write(message + '\n')
+        sys.__stdout__.write(message + "\n")
         sys.__stdout__.flush()
 
     def on_agent_step(self, result):
@@ -33,28 +33,26 @@ class WebAgentManager:
             event = {
                 "type": "step",
                 "action": result.action.get("action") if result.action else "None",
-                "screenshot": result.screenshot_base64
+                "screenshot": result.screenshot_base64,
             }
             self.step_callback(event)
 
-    def initialize_agent(self, base_url: str, model: str, apikey: str, lang: str = "cn"):
+    def initialize_agent(
+        self, base_url: str, model: str, apikey: str, lang: str = "cn"
+    ):
         model_config = ModelConfig(
             base_url=base_url,
             api_key=apikey,
             model_name=model,
         )
-        agent_config = AgentConfig(
-            lang=lang,
-            verbose=True
-        )
+        agent_config = AgentConfig(lang=lang, verbose=True)
         self.agent = PhoneAgent(
             model_config=model_config,
             agent_config=agent_config,
             # We can implement web-based callbacks later if needed
             confirmation_callback=lambda msg: True,
-            takeover_callback=lambda msg: self.log(
-                f"Takeover requested: {msg}"),
-            step_callback=self.on_agent_step
+            takeover_callback=lambda msg: self.log(f"Takeover requested: {msg}"),
+            step_callback=self.on_agent_step,
         )
         self.log(f"Agent initialized with model: {model}")
 
@@ -94,6 +92,12 @@ class WebAgentManager:
         finally:
             sys.stdout = old_stdout
             self.is_running = False
+
+    def cancel_task(self):
+        """Cancel the ongoing task."""
+        if self.agent and self.is_running:
+            self.agent.stop()
+            self.log("Task cancellation requested...")
 
 
 agent_manager = WebAgentManager()

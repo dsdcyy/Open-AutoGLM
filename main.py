@@ -734,9 +734,9 @@ def main():
     # Run system requirements check before proceeding
     if not check_system_requirements(
         device_type,
-        wda_url=args.wda_url
-        if device_type == DeviceType.IOS
-        else "http://localhost:8100",
+        wda_url=(
+            args.wda_url if device_type == DeviceType.IOS else "http://localhost:8100"
+        ),
     ):
         sys.exit(1)
 

@@ -1,11 +1,8 @@
-import sys
-import os
-
 # Add project root to path so we can import phone_agent
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from typing import List
+import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from typing import List, Optional
+from contextlib import asynccontextmanager
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -13,20 +10,20 @@ from pydantic import BaseModel
 from agent_manager import agent_manager
 from phone_agent.adb.connection import ADBConnection
 from phone_agent.adb.input import detect_and_set_adb_keyboard
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-
-app = FastAPI()
-
-# Global reference to the event loop
-main_loop = None
-
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global main_loop
-    import asyncio
     main_loop = asyncio.get_running_loop()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
 
 # Setup templates
 templates = Jinja2Templates(directory="web_ui/templates")
@@ -60,6 +57,7 @@ manager = ConnectionManager()
 
 def log_to_ws(message: str):
     import asyncio
+
     global main_loop
     if main_loop and main_loop.is_running():
         # Schedule the broadcast in the main event loop from the worker thread
@@ -69,6 +67,7 @@ def log_to_ws(message: str):
 def step_to_ws(event: dict):
     import asyncio
     import json
+
     global main_loop
     if main_loop and main_loop.is_running():
         # Serialize to JSON and broadcast
@@ -106,10 +105,8 @@ async def check_system():
 
     if adb_ok:
         first_device = online_devices[0]
-        device_info = {
-            "id": first_device.device_id,
-            "model": first_device.model
-        }
+        device_info = {"id": first_device.device_id,
+                       "model": first_device.model}
 
         # Check if wireless (contains ":")
         if ":" in first_device.device_id:
@@ -136,7 +133,7 @@ async def check_system():
         "adb": adb_ok,
         "keyboard": keyboard_ok,
         "connection_type": conn_type,
-        "device": device_info
+        "device": device_info,
     }
 
 
@@ -155,35 +152,23 @@ async def connect_wireless(config: WirelessConnection):
     try:
         # Execute adb connect command
         result = subprocess.run(
-            ["adb", "connect", target],
-            capture_output=True,
-            text=True,
-            timeout=10
+            ["adb", "connect", target], capture_output=True, text=True, timeout=10
         )
 
         output = result.stdout + result.stderr
 
         # Check if connection successful
         if "connected" in output.lower() or "already connected" in output.lower():
-            return {
-                "success": True,
-                "message": f"Successfully connected to {target}"
-            }
+            return {"success": True, "message": f"Successfully connected to {target}"}
         else:
-            return {
-                "success": False,
-                "message": f"Failed to connect: {output.strip()}"
-            }
+            return {"success": False, "message": f"Failed to connect: {output.strip()}"}
     except subprocess.TimeoutExpired:
         return {
             "success": False,
-            "message": "Connection timeout. Please check IP and port."
+            "message": "Connection timeout. Please check IP and port.",
         }
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error: {str(e)}"
-        }
+        return {"success": False, "message": f"Error: {str(e)}"}
 
 
 @app.post("/disconnect_wireless")
@@ -194,37 +179,28 @@ async def disconnect_wireless():
     try:
         # Execute adb disconnect command (disconnect all)
         result = subprocess.run(
-            ["adb", "disconnect"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            ["adb", "disconnect"], capture_output=True, text=True, timeout=5
         )
 
         output = result.stdout + result.stderr
 
-        return {
-            "success": True,
-            "message": "Wireless ADB disconnected"
-        }
+        return {"success": True, "message": "Wireless ADB disconnected"}
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error: {str(e)}"
-        }
+        return {"success": False, "message": f"Error: {str(e)}"}
 
 
 class InitConfig(BaseModel):
-    base_url: str
-    model: str
-    apikey: str
+    base_url: Optional[str] = "https://api.openai.com/v1"
+    model: Optional[str] = "gpt-4-vision-preview"
+    apikey: Optional[str] = ""
 
 
 @app.post("/init_agent")
 async def init_agent(config: InitConfig):
     agent_manager.initialize_agent(
-        base_url=config.base_url,
-        model=config.model,
-        apikey=config.apikey
+        base_url=config.base_url or "",
+        model=config.model or "",
+        apikey=config.apikey or ""
     )
     return {"status": "ok"}
 
@@ -238,10 +214,9 @@ async def run_task(req: TaskRequest):
     if not agent_manager.agent:
         return {"status": "error", "message": "Agent not initialized"}
 
-    # Run in background event loop
-    import asyncio
-    asyncio.create_task(agent_manager.run_task(req.task))
-    return {"status": "started"}
+    # Run the task and wait for it to finish
+    await agent_manager.run_task(req.task)
+    return {"status": "done"}
 
 
 @app.websocket("/ws/logs")
@@ -254,13 +229,22 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+
+@app.post("/cancel")
+async def cancel_task():
+    """Cancel the ongoing task"""
+    agent_manager.cancel_task()
+    return {"success": True}
+
+
 if __name__ == "__main__":
     import uvicorn
     import argparse
 
     parser = argparse.ArgumentParser(description="AutoGLM Web UI")
-    parser.add_argument("--port", type=int, default=8001,
-                        help="Port to run the server on")
+    parser.add_argument(
+        "--port", type=int, default=8001, help="Port to run the server on"
+    )
     args = parser.parse_args()
 
     # Check for ENV overrides if CLI arg is default

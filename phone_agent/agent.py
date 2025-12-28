@@ -85,6 +85,11 @@ class PhoneAgent:
 
         self._context: list[dict[str, Any]] = []
         self._step_count = 0
+        self._stop_requested = False
+
+    def stop(self) -> None:
+        """Request the agent to stop its current task."""
+        self._stop_requested = True
 
     def run(self, task: str) -> str:
         """
@@ -98,6 +103,7 @@ class PhoneAgent:
         """
         self._context = []
         self._step_count = 0
+        self._stop_requested = False
 
         # First step with user prompt
         result = self._execute_step(task, is_first=True)
@@ -109,6 +115,9 @@ class PhoneAgent:
 
         # Continue until finished or max steps reached
         while self._step_count < self.agent_config.max_steps:
+            if self._stop_requested:
+                return "Task cancelled by user"
+
             result = self._execute_step(is_first=False)
             if self.step_callback:
                 self.step_callback(result)
@@ -146,19 +155,26 @@ class PhoneAgent:
         self, user_prompt: str | None = None, is_first: bool = False
     ) -> StepResult:
         """Execute a single step of the agent loop."""
+        if self._stop_requested:
+            return StepResult(
+                success=False,
+                finished=True,
+                action=None,
+                thinking="",
+                message="Task cancelled by user",
+            )
+
         self._step_count += 1
 
         # Capture current screen state
         device_factory = get_device_factory()
         screenshot = device_factory.get_screenshot(self.agent_config.device_id)
-        current_app = device_factory.get_current_app(
-            self.agent_config.device_id)
+        current_app = device_factory.get_current_app(self.agent_config.device_id)
 
         # Build messages
         if is_first:
             self._context.append(
-                MessageBuilder.create_system_message(
-                    self.agent_config.system_prompt)
+                MessageBuilder.create_system_message(self.agent_config.system_prompt)
             )
 
             screen_info = MessageBuilder.build_screen_info(current_app)
@@ -213,8 +229,7 @@ class PhoneAgent:
             print("=" * 50 + "\n")
 
         # Remove image from context to save space
-        self._context[-1] = MessageBuilder.remove_images_from_message(
-            self._context[-1])
+        self._context[-1] = MessageBuilder.remove_images_from_message(self._context[-1])
 
         # Execute action
         try:
