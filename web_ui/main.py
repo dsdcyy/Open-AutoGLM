@@ -1,3 +1,7 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 # Add project root to path so we can import phone_agent
 import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
@@ -10,10 +14,6 @@ from pydantic import BaseModel
 from agent_manager import agent_manager
 from phone_agent.adb.connection import ADBConnection
 from phone_agent.adb.input import detect_and_set_adb_keyboard
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 @asynccontextmanager
@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI):
     global main_loop
     main_loop = asyncio.get_running_loop()
     yield
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -105,8 +106,7 @@ async def check_system():
 
     if adb_ok:
         first_device = online_devices[0]
-        device_info = {"id": first_device.device_id,
-                       "model": first_device.model}
+        device_info = {"id": first_device.device_id, "model": first_device.model}
 
         # Check if wireless (contains ":")
         if ":" in first_device.device_id:
@@ -200,7 +200,7 @@ async def init_agent(config: InitConfig):
     agent_manager.initialize_agent(
         base_url=config.base_url or "",
         model=config.model or "",
-        apikey=config.apikey or ""
+        apikey=config.apikey or "",
     )
     return {"status": "ok"}
 
