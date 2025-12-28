@@ -95,6 +95,27 @@ async def check_system():
     online_devices = [d for d in devices if d.status == "device"]
     adb_ok = len(online_devices) > 0
 
+    # Determine connection type and get device info
+    conn_type = "none"
+    device_info = None
+
+    if adb_ok:
+        first_device = online_devices[0]
+        device_info = {
+            "id": first_device.device_id,
+            "model": first_device.model
+        }
+
+        # Check if wireless (contains ":")
+        if ":" in first_device.device_id:
+            conn_type = "wireless"
+            # Parse IP and port from device_id (format: ip:port)
+            parts = first_device.device_id.split(":")
+            device_info["ip"] = parts[0]
+            device_info["port"] = parts[1]
+        else:
+            conn_type = "usb"
+
     keyboard_ok = False
     if adb_ok:
         try:
@@ -106,7 +127,12 @@ async def check_system():
             print(f"Keyboard check check failed: {e}")
             keyboard_ok = False
 
-    return {"adb": adb_ok, "keyboard": keyboard_ok}
+    return {
+        "adb": adb_ok,
+        "keyboard": keyboard_ok,
+        "connection_type": conn_type,
+        "device": device_info
+    }
 
 
 class WirelessConnection(BaseModel):
@@ -155,6 +181,33 @@ async def connect_wireless(config: WirelessConnection):
         }
 
 
+
+
+@app.post("/disconnect_wireless")
+async def disconnect_wireless():
+    """Disconnect wireless ADB device"""
+    import subprocess
+    
+    try:
+        # Execute adb disconnect command (disconnect all)
+        result = subprocess.run(
+            ["adb", "disconnect"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        output = result.stdout + result.stderr
+        
+        return {
+            "success": True,
+            "message": "Wireless ADB disconnected"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }
 class InitConfig(BaseModel):
     base_url: str
     model: str

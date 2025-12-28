@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
     </style>
 </head>
+
 <body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
 
     <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl p-8 border border-gray-700">
@@ -31,10 +35,22 @@
                     </div>
                     <div class="flex items-center justify-between">
                         <span>ADB Keyboard</span>
-                        <span id="status-keyboard" class="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">Pending</span>
+                        <span id="status-keyboard"
+                            class="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">Pending</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>Connection Type</span>
+                        <span id="status-conn-type"
+                            class="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">None</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>Device Model</span>
+                        <span id="status-device-model"
+                            class="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">-</span>
                     </div>
                 </div>
-                <button onclick="checkSystem()" class="mt-4 w-full py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors">
+                <button onclick="checkSystem()"
+                    class="mt-4 w-full py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors">
                     Re-check System
                 </button>
             </div>
@@ -43,11 +59,11 @@
             <div class="bg-gray-900 rounded-lg p-6 border border-gray-700">
                 <h2 class="text-xl font-semibold mb-4 text-white">ADB Wireless Connection</h2>
                 <p class="text-gray-400 text-sm mb-4">Connect to your device over Wi-Fi (no USB required)</p>
-                
+
                 <div class="space-y-3">
                     <div>
                         <label class="block text-sm text-gray-400 mb-1">Device IP Address</label>
-                        <input type="text" id="wireless-ip" placeholder="192.168.1.100" 
+                        <input type="text" id="wireless-ip" placeholder="192.168.1.100"
                             class="w-full bg-gray-800 border border-gray-600 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-500 text-white">
                     </div>
                     <div>
@@ -57,25 +73,34 @@
                     </div>
                     <div id="wireless-status" class="hidden p-3 rounded text-sm"></div>
                 </div>
-                
-                <button onclick="connectWireless()" class="mt-4 w-full py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm transition-colors">
-                    Connect Wireless ADB
-                </button>
+
+                <div class="mt-4 flex gap-2">
+                    <button id="connect-btn" onclick="connectWireless()"
+                        class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm transition-colors">
+                        Connect Wireless ADB
+                    </button>
+                    <button id="disconnect-btn" onclick="disconnectWireless()"
+                        class="flex-1 py-2 bg-red-600 hover:bg-red-500 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>
+                        Disconnect
+                    </button>
+                </div>
             </div>
 
             <!-- Configuration Form -->
-            <form id="config-form" onsubmit="startAgent(event)" class="bg-gray-900 rounded-lg p-6 border border-gray-700">
+            <form id="config-form" onsubmit="startAgent(event)"
+                class="bg-gray-900 rounded-lg p-6 border border-gray-700">
                 <h2 class="text-xl font-semibold mb-4 text-white">Model Configuration</h2>
-                
+
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm text-gray-400 mb-1">Base URL</label>
-                        <input type="text" name="base_url" value="https://open.bigmodel.cn/api/paas/v4" 
+                        <input type="text" name="base_url" value="https://open.bigmodel.cn/api/paas/v4"
                             class="w-full bg-gray-800 border border-gray-600 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-500 text-white">
                     </div>
                     <div>
                         <label class="block text-sm text-gray-400 mb-1">Model Name</label>
-                        <input type="text" name="model" value="autoglm-phone" 
+                        <input type="text" name="model" value="autoglm-phone"
                             class="w-full bg-gray-800 border border-gray-600 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-500 text-white">
                     </div>
                     <div>
@@ -86,7 +111,8 @@
                 </div>
 
                 <div class="mt-6">
-                    <button type="submit" id="start-btn" class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded font-semibold transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="submit" id="start-btn"
+                        class="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded font-semibold transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                         Launch Agent
                     </button>
                 </div>
@@ -98,18 +124,68 @@
         async function checkSystem() {
             const adbEl = document.getElementById('status-adb');
             const kbEl = document.getElementById('status-keyboard');
+            const connTypeEl = document.getElementById('status-conn-type');
+            const deviceModelEl = document.getElementById('status-device-model');
             const startBtn = document.getElementById('start-btn');
-            
+            const wirelessIP = document.getElementById('wireless-ip');
+            const wirelessPort = document.getElementById('wireless-port');
+            const connectBtn = document.getElementById('connect-btn');
+            const disconnectBtn = document.getElementById('disconnect-btn');
+
             adbEl.innerText = "Checking...";
             kbEl.innerText = "Checking...";
+            connTypeEl.innerText = "Checking...";
             startBtn.disabled = true;
 
             try {
                 const res = await fetch('/check', { method: 'POST' });
                 const data = await res.json();
-                
+
                 updateStatus(adbEl, data.adb);
                 updateStatus(kbEl, data.keyboard);
+
+                // Update connection type
+                const connType = data.connection_type || 'none';
+                let connTypeText = 'None';
+                let connTypeClass = 'px-2 py-1 rounded text-xs bg-gray-700 text-gray-300';
+
+                if (connType === 'usb') {
+                    connTypeText = 'USB';
+                    connTypeClass = 'px-2 py-1 rounded text-xs bg-blue-900 text-blue-300 border border-blue-700';
+                    // Disable wireless controls when USB connected
+                    wirelessIP.disabled = true;
+                    wirelessPort.disabled = true;
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = true;
+                } else if (connType === 'wireless') {
+                    connTypeText = `Wireless (${data.device.ip}:${data.device.port})`;
+                    connTypeClass = 'px-2 py-1 rounded text-xs bg-purple-900 text-purple-300 border border-purple-700';
+                    // Show wireless info and enable disconnect
+                    wirelessIP.value = data.device.ip;
+                    wirelessPort.value = data.device.port;
+                    wirelessIP.disabled = true;
+                    wirelessPort.disabled = true;
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                } else {
+                    // No connection - enable wireless controls
+                    wirelessIP.disabled = false;
+                    wirelessPort.disabled = false;
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                }
+
+                connTypeEl.className = connTypeClass;
+                connTypeEl.innerText = connTypeText;
+
+                // Update device model
+                if (data.device && data.device.model) {
+                    deviceModelEl.className = 'px-2 py-1 rounded text-xs bg-green-900 text-green-300 border border-green-700';
+                    deviceModelEl.innerText = data.device.model;
+                } else {
+                    deviceModelEl.className = 'px-2 py-1 rounded text-xs bg-gray-700 text-gray-300';
+                    deviceModelEl.innerText = '-';
+                }
 
                 if (data.adb && data.keyboard) {
                     startBtn.disabled = false;
@@ -150,22 +226,22 @@
 
         // Auto check on load
         window.addEventListener('load', () => {
-             checkSystem();
-             // Load saved config
-             const saved = localStorage.getItem('config');
-             if (saved) {
-                 const data = JSON.parse(saved);
-                 const form = document.getElementById('config-form');
-                 form.base_url.value = data.base_url || form.base_url.value;
-                 form.model.value = data.model || form.model.value;
-                 form.apikey.value = data.apikey || "";
-             }
+            checkSystem();
+            // Load saved config
+            const saved = localStorage.getItem('config');
+            if (saved) {
+                const data = JSON.parse(saved);
+                const form = document.getElementById('config-form');
+                form.base_url.value = data.base_url || form.base_url.value;
+                form.model.value = data.model || form.model.value;
+                form.apikey.value = data.apikey || "";
+            }
         });
 
         async function connectWireless() {
             const ip = document.getElementById("wireless-ip").value.trim();
             const port = document.getElementById("wireless-port").value.trim();
-            
+
             if (!ip) {
                 showWirelessStatus("Please enter IP address", "error");
                 return;
@@ -174,18 +250,18 @@
                 showWirelessStatus("Please enter port", "error");
                 return;
             }
-            
+
             showWirelessStatus("Connecting...", "info");
-            
+
             try {
                 const res = await fetch("/connect_wireless", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ ip, port })
                 });
-                
+
                 const data = await res.json();
-                
+
                 if (data.success) {
                     showWirelessStatus(data.message, "success");
                     setTimeout(() => checkSystem(), 1000);
@@ -196,12 +272,41 @@
                 showWirelessStatus("Connection failed: " + e.message, "error");
             }
         }
-        
+
+        async function disconnectWireless() {
+            const statusEl = document.getElementById("wireless-status");
+            const disconnectBtn = document.getElementById("disconnect-btn");
+
+            showWirelessStatus("Disconnecting...", "info");
+            disconnectBtn.disabled = true;
+
+            try {
+                const res = await fetch("/disconnect_wireless", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    showWirelessStatus(data.message, "success");
+                    setTimeout(() => checkSystem(), 1000);
+                } else {
+                    showWirelessStatus(data.message, "error");
+                    disconnectBtn.disabled = false;
+                }
+            } catch (e) {
+                showWirelessStatus("Disconnect failed: " + e.message, "error");
+                disconnectBtn.disabled = false;
+            }
+        }
+
+
         function showWirelessStatus(message, type) {
             const statusEl = document.getElementById("wireless-status");
             statusEl.classList.remove("hidden");
             statusEl.innerText = message;
-            
+
             if (type === "success") {
                 statusEl.className = "p-3 rounded text-sm bg-green-900 text-green-300 border border-green-700";
             } else if (type === "error") {
@@ -212,4 +317,5 @@
         }
     </script>
 </body>
+
 </html>
