@@ -1,17 +1,19 @@
-from phone_agent.adb.input import detect_and_set_adb_keyboard
-from phone_agent.adb.connection import ADBConnection
-from agent_manager import agent_manager
-from pydantic import BaseModel
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from typing import List
 import sys
 import os
 
 # Add project root to path so we can import phone_agent
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from typing import List
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from agent_manager import agent_manager
+from phone_agent.adb.connection import ADBConnection
+from phone_agent.adb.input import detect_and_set_adb_keyboard
+
 
 
 app = FastAPI()
@@ -28,6 +30,9 @@ async def startup_event():
 
 # Setup templates
 templates = Jinja2Templates(directory="web_ui/templates")
+
+# Serve static files
+app.mount("/static", StaticFiles(directory="web_ui/static"), name="static")
 
 # Store active websockets
 
@@ -181,13 +186,11 @@ async def connect_wireless(config: WirelessConnection):
         }
 
 
-
-
 @app.post("/disconnect_wireless")
 async def disconnect_wireless():
     """Disconnect wireless ADB device"""
     import subprocess
-    
+
     try:
         # Execute adb disconnect command (disconnect all)
         result = subprocess.run(
@@ -196,9 +199,9 @@ async def disconnect_wireless():
             text=True,
             timeout=5
         )
-        
+
         output = result.stdout + result.stderr
-        
+
         return {
             "success": True,
             "message": "Wireless ADB disconnected"
@@ -208,6 +211,8 @@ async def disconnect_wireless():
             "success": False,
             "message": f"Error: {str(e)}"
         }
+
+
 class InitConfig(BaseModel):
     base_url: str
     model: str
